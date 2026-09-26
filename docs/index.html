@@ -175,6 +175,9 @@
     script.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
         document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+        if (window.XR8) {
+          startXR8();
+        }
       }).then((instance) => {
         unityInstance = instance;
         document.querySelector("#unity-loading-bar").style.display = "none";
@@ -188,6 +191,68 @@
     };
 
     document.body.appendChild(script);
+
+    function startXR8() {
+      if (!window.XR8) {
+        console.error("XR8 not loaded");
+        return;
+      }
+
+      XR8.XrController.configure({
+        disableWorldTracking: false,
+        leftHandedAxes: true,
+        scale: "absolute"
+      });
+
+      XR8.addCameraPipelineModules([
+        XR8.GlTextureRenderer.pipelineModule(),
+        XR8.XrController.pipelineModule(),
+
+        {
+          name: "unity-pose-bridge",
+
+          onUpdate: ({ processCpuResult }) => {
+            const reality = processCpuResult?.reality;
+
+            if (!reality || !unityInstance) return;
+
+            const p = reality.position;
+            const r = reality.rotation;
+
+            if (!p || !r) return;
+
+            const pose = {
+              px: p.x,
+              py: p.y,
+              pz: p.z,
+
+              qx: r.x,
+              qy: r.y,
+              qz: r.z,
+              qw: r.w,
+
+              status: reality.trackingStatus || ""
+            };
+
+            unityInstance.SendMessage(
+              "GameObject",
+              "SetCameraPose",
+              JSON.stringify(pose)
+            );
+          }
+        }
+      ]);
+
+      XR8.run({
+        canvas: document.getElementById("camerafeed")
+      });
+    }
+
+    window.addEventListener("xrloaded", () => {
+      if (unityInstance) {
+        startXR8();
+      }
+    });
 
   </script>
 </body>
