@@ -139,6 +139,10 @@
       companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
       productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
       productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      webglContextAttributes: {
+        alpha: true,
+        powerPreference: {{{ WEBGL_POWER_PREFERENCE }}}
+      },
       showBanner: unityShowBanner,
       // errorHandler: function(err, url, line) {
       //    alert("error " + err + " occurred at line " + line);
@@ -164,7 +168,9 @@
     // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
     // expected to change.
 
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    var isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+      (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (isMobileDevice) {
       // Mobile device style: fill the whole browser client area with the game canvas:
 
       var meta = document.createElement('meta');
@@ -242,7 +248,7 @@
       }
 
       XR8.XrController.configure({
-        disableWorldTracking: false,
+        disableWorldTracking: !isMobileDevice,
         leftHandedAxes: true,
         scale: "absolute"
       });
@@ -287,7 +293,9 @@
       ]);
 
       XR8.run({
-        canvas: document.getElementById("camerafeed")
+        canvas: document.getElementById("camerafeed"),
+        cameraConfig: { direction: isMobileDevice ? XR8.XrConfig.camera().BACK : XR8.XrConfig.camera().FRONT },
+        allowedDevices: XR8.XrConfig.device().ANY
       });
     }
 
